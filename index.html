@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>TiffyAI Sovereign Gateway</title>
+    <style>
+        body { background: #0e0e0e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px; border-radius: 20px; background: rgba(20, 20, 20, 0.9); border: 1px solid #00f0ff; box-shadow: 0 0 25px #00f0ff; }
+        h1, h2, h3 { color: #00f0ff; text-align: center; }
+        button { font-size: 1.2rem; padding: 12px 24px; margin: 10px; border: none; border-radius: 10px; background: linear-gradient(135deg, #00f0ff, #0088ff); color: #fff; cursor: pointer; }
+        input, textarea { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; background: #1a1a1a; color: #fff; border: 1px solid #00f0ff; }
+        .hidden { display: none; }
+        video, canvas { width: 100%; max-height: 250px; margin-top: 10px; border-radius: 10px; }
+        #balanceSection { text-align: center; font-size: 1.5rem; color: #00f0ff; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>TiffyAI Sovereign Gateway</h1>
+    
+    <!-- Balance Dashboard -->
+    <div id="balanceSection">
+        <p>TiffyAI Balance: <span id="balance">0.00</span></p>
+        <p>Nitro TUSD Balance: <span id="nitroBalance">0.00</span></p>
+    </div>
+
+    <button onclick="toggleSection('kycSection')">Complete Business Registration</button>
+
+    <!-- KYC & Agreement Section -->
+    <div id="kycSection" class="hidden">
+        <h2>Business Registration Agreement</h2>
+        <input type="text" id="bizName" placeholder="Business Name">
+        <input type="text" id="walletAddress" placeholder="Wallet Address">
+        <input type="date" id="regDate">
+        <input type="text" id="signature" placeholder="Authorized Signatory">
+        
+        <h3>Identity Verification</h3>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <button onclick="takeSelfie()">Capture Selfie</button>
+        
+        <input type="file" id="idFile" accept="image/*">
+        <button onclick="submitAgreement()">Commit to Local Ledger</button>
+    </div>
+</div>
+
+<script>
+    // Load balances from local storage
+    function updateLocalBalances() {
+        document.getElementById('balance').innerText = localStorage.getItem('tiffy_balance') || "0.00";
+        document.getElementById('nitroBalance').innerText = localStorage.getItem('nitro_tusd_balance') || "0.00";
+    }
+
+    function toggleSection(id) {
+        document.getElementById(id).classList.toggle('hidden');
+    }
+
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById('video').srcObject = stream;
+        } catch (e) { alert("Camera access denied."); }
+    }
+
+    function takeSelfie() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        alert("Selfie Captured & Stored locally.");
+    }
+
+    async function submitAgreement() {
+        const data = `${document.getElementById('bizName').value}|${document.getElementById('walletAddress').value}|${document.getElementById('regDate').value}`;
+        const encoder = new TextEncoder();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+        const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        alert("Business Agreement Fingerprinted: " + hashHex);
+    }
+
+    // Initialize
+    startCamera();
+    updateLocalBalances();
+</script>
+</body>
+</html>
