@@ -10,14 +10,22 @@
         input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255, 255, 255, 0.08); color: #fff; box-sizing: border-box; }
         button { background: linear-gradient(135deg, #00f0ff, #0088ff); cursor: pointer; text-transform: uppercase; font-weight: bold; }
         .hidden { display: none !important; }
+        
+        /* Verification Status Glow */
+        #statusIndicator { text-align: center; padding: 10px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; }
+        .status-pending { border: 1px solid #ff007f; color: #ff007f; box-shadow: 0 0 10px #ff007f; }
+        .status-verified { border: 1px solid #00ff41; color: #00ff41; box-shadow: 0 0 15px #00ff41; }
+        
         #balanceSection { text-align: center; margin: 20px 0; font-size: 1.2rem; }
-        #successMessage { color: #00f0ff; text-align: center; margin-top: 20px; }
         canvas { width: 100%; margin-top: 10px; border-radius: 12px; border: 1px solid #00f0ff; }
     </style>
 </head>
-<body onload="loadBalances()">
+<body onload="initUI()">
 
 <div class="container" id="regForm">
+    <!-- Verification Status Display -->
+    <div id="statusIndicator">PENDING VERIFICATION</div>
+    
     <h1>BUSINESS REGISTRATION</h1>
     
     <div id="balanceSection">
@@ -46,48 +54,55 @@
 </div>
 
 <script>
-    // 1. Balance Loading
+    function initUI() {
+        loadBalances();
+        updateStatus();
+    }
+
+    function updateStatus() {
+        const statusDiv = document.getElementById('statusIndicator');
+        if (localStorage.getItem("KYC_Verified_Hash")) {
+            statusDiv.innerText = "VERIFIED";
+            statusDiv.className = "status-verified";
+        } else {
+            statusDiv.innerText = "PENDING VERIFICATION";
+            statusDiv.className = "status-pending";
+        }
+    }
+
     function loadBalances() {
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
     }
 
-    // 2. Selfie Logic
     async function takeSelfie() {
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
         canvas.classList.remove('hidden');
         alert("Selfie Captured!");
     }
 
-    // 3. Submission Logic
     async function submitRegistration() {
         const idFile = document.getElementById("idFile").files[0];
         if(!idFile) { alert("Please upload your ID Card."); return; }
         
         const data = `${document.getElementById("bizName").value}|${document.getElementById('walletAddress').value}|${Date.now()}`;
-        const encoder = new TextEncoder();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
         const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         
-        // Save to Ledger
         localStorage.setItem("KYC_Verified_Hash", hashHex);
         
-        // UI Feedback
         document.getElementById('regForm').classList.add('hidden');
         document.getElementById('successMessage').classList.remove('hidden');
     }
 
-    // Initialize Camera
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
         document.getElementById('video').srcObject = stream;
-    }).catch(e => console.error("Camera access failed", e));
+    });
 </script>
 </body>
 </html>
