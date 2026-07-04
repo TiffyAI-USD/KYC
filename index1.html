@@ -52,7 +52,6 @@
             font-size: 16px;
         }
 
-        /* Gold Buttons */
         button { 
             width: 100%; 
             padding: 18px; 
@@ -69,7 +68,6 @@
 
         button:hover { transform: scale(1.02); }
 
-        /* Glowing Balances */
         #balanceSection { 
             text-align: center; 
             margin: 30px 0; 
@@ -122,8 +120,16 @@
 
 <script>
     function initUI() {
+        // Restored correct storage keys
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
+        
+        if (localStorage.getItem("KYC_Verified_Hash")) {
+            const statusDiv = document.getElementById('statusIndicator');
+            statusDiv.innerText = "VERIFIED";
+            statusDiv.style.borderColor = "#00ff41";
+            statusDiv.style.color = "#00ff41";
+        }
     }
 
     async function submitRegistration() {
