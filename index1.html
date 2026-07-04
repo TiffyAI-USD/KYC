@@ -6,10 +6,10 @@
     <title>TiffyAI Sovereign Gateway - Registration</title>
     <style>
         :root {
-            --gold: #d4af37;
-            --gold-light: #f1d37a;
+            --gold-gradient: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            --shocking-pink: #ff007f;
+            --electric-blue: #00f0ff;
             --black: #050505;
-            --surface: #0a0a0a;
         }
 
         body { 
@@ -27,24 +27,22 @@
             width: 90%; 
             max-width: 600px; 
             padding: 40px; 
-            background: var(--surface); 
-            border: 1px solid var(--gold); 
+            background: #0a0a0a; 
+            border: 1px solid #333; 
             border-radius: 4px; 
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 40px rgba(191, 149, 63, 0.15);
         }
 
-        h1, h2, h3 { 
-            color: var(--gold); 
+        h1, h3 { 
             text-align: center; 
             text-transform: uppercase; 
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            color: #fff;
         }
 
-        h1 { font-size: 28px; margin-bottom: 30px; }
-
-        input, button { 
+        input { 
             width: 100%; 
-            padding: 16px; 
+            padding: 18px; 
             margin-top: 15px; 
             border-radius: 2px; 
             background: #111; 
@@ -54,42 +52,47 @@
             font-size: 16px;
         }
 
-        input:focus { border-color: var(--gold); outline: none; }
-
+        /* Gold Buttons */
         button { 
-            background: var(--gold); 
-            color: var(--black); 
-            cursor: pointer; 
-            text-transform: uppercase; 
-            font-weight: 800; 
+            width: 100%; 
+            padding: 18px; 
+            margin-top: 20px; 
+            border-radius: 2px; 
+            background: var(--gold-gradient);
             border: none;
-            transition: 0.3s;
+            color: var(--black);
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.2s;
         }
 
-        button:hover { background: var(--gold-light); }
+        button:hover { transform: scale(1.02); }
+
+        /* Glowing Balances */
+        #balanceSection { 
+            text-align: center; 
+            margin: 30px 0; 
+            font-size: 1.6rem; 
+            font-weight: bold;
+        }
+        
+        .glow-pink { color: var(--shocking-pink); text-shadow: 0 0 10px var(--shocking-pink); }
+        .glow-blue { color: var(--electric-blue); text-shadow: 0 0 10px var(--electric-blue); }
 
         .hidden { display: none !important; }
         
         #statusIndicator { 
             text-align: center; 
             padding: 15px; 
-            border: 1px solid var(--gold); 
+            border: 1px solid #555; 
             margin-bottom: 30px; 
-            font-weight: bold; 
             text-transform: uppercase; 
-            color: var(--gold);
+            color: #888;
         }
         
-        #balanceSection { 
-            text-align: center; 
-            margin: 30px 0; 
-            font-size: 1.4rem; 
-            color: #ccc;
-        }
-
         #video { width: 100%; border: 1px solid #333; margin-top: 10px; }
-        
-        label { margin-top: 20px; display: block; color: var(--gold); font-size: 14px; }
+        label { margin-top: 20px; display: block; color: #bf953f; font-size: 14px; }
     </style>
 </head>
 <body onload="initUI()">
@@ -100,53 +103,27 @@
     <h1>Business Registration</h1>
     
     <div id="balanceSection">
-        <div>Tiffy Tokens: <span id="tokenDisplay" style="color:white;">0.00</span></div>
-        <div>Nitro TUSD: <span id="nitroDisplay" style="color:white;">0.00</span></div>
+        <div>Tiffy Tokens: <span id="tokenDisplay" class="glow-pink">0.00</span></div>
+        <div>Nitro TUSD: <span id="nitroDisplay" class="glow-blue">0.00</span></div>
     </div>
 
     <input type="text" id="bizName" placeholder="Business Name">
-    <input type="text" id="walletAddress" placeholder="Wallet Address">
+    <input type="text" id="walletAddress" placeholder="TiffyAI Token or BNB Wallet Address">
     
     <h3>Identity Verification</h3>
     <video id="video" autoplay></video>
-    <canvas id="canvas" class="hidden"></canvas>
     <button onclick="takeSelfie()">Capture ID Selfie</button>
     
     <label>Upload ID Card</label>
     <input type="file" id="idFile" accept="image/*,application/pdf">
     
-    <button onclick="submitRegistration()" style="margin-top: 30px;">Commit to Ledger</button>
-</div>
-
-<div id="successMessage" class="hidden" style="text-align:center;">
-    <h1>Registration Successful</h1>
-    <p>Your business identity has been securely fingerprinted.</p>
-    <button onclick="window.location.reload()">Restart Gateway</button>
+    <button onclick="submitRegistration()">Commit to Ledger</button>
 </div>
 
 <script>
     function initUI() {
-        loadBalances();
-        updateStatus();
-    }
-
-    function updateStatus() {
-        const statusDiv = document.getElementById('statusIndicator');
-        if (localStorage.getItem("KYC_Verified_Hash")) {
-            statusDiv.innerText = "VERIFIED";
-            statusDiv.style.borderColor = "#00ff41";
-            statusDiv.style.color = "#00ff41";
-        }
-    }
-
-    function loadBalances() {
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
-    }
-
-    async function takeSelfie() {
-        const video = document.getElementById('video');
-        alert("Selfie Captured for Ledger Processing.");
     }
 
     async function submitRegistration() {
@@ -158,14 +135,13 @@
         const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         
         localStorage.setItem("KYC_Verified_Hash", hashHex);
-        
-        document.getElementById('regForm').classList.add('hidden');
-        document.getElementById('successMessage').classList.remove('hidden');
+        alert("Registration Committed to Ledger.");
+        window.location.reload();
     }
 
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
         document.getElementById('video').srcObject = stream;
-    }).catch(err => console.error("Camera access denied."));
+    });
 </script>
 </body>
 </html>
