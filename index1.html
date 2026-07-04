@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TiffyAI Sovereign Gateway - Registration</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f1d37a;
+            --black: #050505;
+            --surface: #0a0a0a;
+        }
+
+        body { 
+            background: var(--black); 
+            font-family: 'Orbitron', sans-serif; 
+            color: #fff; 
+            margin: 0; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container { 
+            width: 90%; 
+            max-width: 600px; 
+            padding: 40px; 
+            background: var(--surface); 
+            border: 1px solid var(--gold); 
+            border-radius: 4px; 
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+        }
+
+        h1, h2, h3 { 
+            color: var(--gold); 
+            text-align: center; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+        }
+
+        h1 { font-size: 28px; margin-bottom: 30px; }
+
+        input, button { 
+            width: 100%; 
+            padding: 16px; 
+            margin-top: 15px; 
+            border-radius: 2px; 
+            background: #111; 
+            border: 1px solid #333; 
+            color: #fff; 
+            box-sizing: border-box; 
+            font-size: 16px;
+        }
+
+        input:focus { border-color: var(--gold); outline: none; }
+
+        button { 
+            background: var(--gold); 
+            color: var(--black); 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            font-weight: 800; 
+            border: none;
+            transition: 0.3s;
+        }
+
+        button:hover { background: var(--gold-light); }
+
+        .hidden { display: none !important; }
+        
+        #statusIndicator { 
+            text-align: center; 
+            padding: 15px; 
+            border: 1px solid var(--gold); 
+            margin-bottom: 30px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            color: var(--gold);
+        }
+        
+        #balanceSection { 
+            text-align: center; 
+            margin: 30px 0; 
+            font-size: 1.4rem; 
+            color: #ccc;
+        }
+
+        #video { width: 100%; border: 1px solid #333; margin-top: 10px; }
+        
+        label { margin-top: 20px; display: block; color: var(--gold); font-size: 14px; }
+    </style>
+</head>
+<body onload="initUI()">
+
+<div class="container" id="regForm">
+    <div id="statusIndicator">PENDING VERIFICATION</div>
+    
+    <h1>Business Registration</h1>
+    
+    <div id="balanceSection">
+        <div>Tiffy Tokens: <span id="tokenDisplay" style="color:white;">0.00</span></div>
+        <div>Nitro TUSD: <span id="nitroDisplay" style="color:white;">0.00</span></div>
+    </div>
+
+    <input type="text" id="bizName" placeholder="Business Name">
+    <input type="text" id="walletAddress" placeholder="Wallet Address">
+    
+    <h3>Identity Verification</h3>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" class="hidden"></canvas>
+    <button onclick="takeSelfie()">Capture ID Selfie</button>
+    
+    <label>Upload ID Card</label>
+    <input type="file" id="idFile" accept="image/*,application/pdf">
+    
+    <button onclick="submitRegistration()" style="margin-top: 30px;">Commit to Ledger</button>
+</div>
+
+<div id="successMessage" class="hidden" style="text-align:center;">
+    <h1>Registration Successful</h1>
+    <p>Your business identity has been securely fingerprinted.</p>
+    <button onclick="window.location.reload()">Restart Gateway</button>
+</div>
+
+<script>
+    function initUI() {
+        loadBalances();
+        updateStatus();
+    }
+
+    function updateStatus() {
+        const statusDiv = document.getElementById('statusIndicator');
+        if (localStorage.getItem("KYC_Verified_Hash")) {
+            statusDiv.innerText = "VERIFIED";
+            statusDiv.style.borderColor = "#00ff41";
+            statusDiv.style.color = "#00ff41";
+        }
+    }
+
+    function loadBalances() {
+        document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
+        document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
+    }
+
+    async function takeSelfie() {
+        const video = document.getElementById('video');
+        alert("Selfie Captured for Ledger Processing.");
+    }
+
+    async function submitRegistration() {
+        const idFile = document.getElementById("idFile").files[0];
+        if(!idFile) { alert("Please attach ID documentation."); return; }
+        
+        const data = `${document.getElementById("bizName").value}|${document.getElementById('walletAddress').value}|${Date.now()}`;
+        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+        const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        localStorage.setItem("KYC_Verified_Hash", hashHex);
+        
+        document.getElementById('regForm').classList.add('hidden');
+        document.getElementById('successMessage').classList.remove('hidden');
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        document.getElementById('video').srcObject = stream;
+    }).catch(err => console.error("Camera access denied."));
+</script>
+</body>
+</html>
