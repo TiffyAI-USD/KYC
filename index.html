@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -11,11 +11,11 @@
             --black: #050505;
         }
 
-        body { 
-            background: var(--black); 
-            font-family: 'Orbitron', sans-serif; 
-            color: #fff; 
-            margin: 0; 
+        body {
+            background: var(--black);
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+            margin: 0;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -23,41 +23,41 @@
             padding: 20px;
         }
 
-        .container { 
-            width: 100%; 
+        .container {
+            width: 100%;
             max-width: 900px; /* Restored to larger, wider scale */
-            padding: 60px; 
-            background: #0a0a0a; 
-            border: 1px solid #333; 
-            border-radius: 8px; 
+            padding: 60px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
             box-shadow: 0 0 60px rgba(191, 149, 63, 0.2);
         }
 
-        h1, h2, h3 { 
+        h1, h2, h3 {
             color: #fff;
-            text-align: center; 
-            text-transform: uppercase; 
+            text-align: center;
+            text-transform: uppercase;
             letter-spacing: 4px;
             margin-bottom: 30px;
         }
 
-        input { 
-            width: 100%; 
-            padding: 22px; 
-            margin-top: 20px; 
-            border-radius: 4px; 
-            background: #111; 
-            border: 1px solid #444; 
-            color: #fff; 
-            box-sizing: border-box; 
+        input {
+            width: 100%;
+            padding: 22px;
+            margin-top: 20px;
+            border-radius: 4px;
+            background: #111;
+            border: 1px solid #444;
+            color: #fff;
+            box-sizing: border-box;
             font-size: 18px;
         }
 
-        button { 
-            width: 100%; 
-            padding: 22px; 
-            margin-top: 30px; 
-            border-radius: 4px; 
+        button {
+            width: 100%;
+            padding: 22px;
+            margin-top: 30px;
+            border-radius: 4px;
             background: var(--gold-gradient);
             border: none;
             color: var(--black);
@@ -71,30 +71,30 @@
         button:hover { transform: scale(1.01); }
 
         .hidden { display: none !important; }
-        
-        #statusIndicator { 
-            text-align: center; 
-            padding: 20px; 
-            border: 1px solid #555; 
-            margin-bottom: 40px; 
-            text-transform: uppercase; 
+       
+        #statusIndicator {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #555;
+            margin-bottom: 40px;
+            text-transform: uppercase;
             font-weight: bold;
             font-size: 1.2rem;
         }
-        
+       
         .status-pending { border: 1px solid #ff007f !important; color: #ff007f; box-shadow: 0 0 15px #ff007f; }
         .status-verified { border: 1px solid #00ff41 !important; color: #00ff41; box-shadow: 0 0 20px #00ff41; }
-        
-        #balanceSection { 
-            text-align: center; 
-            margin: 40px 0; 
-            font-size: 2rem; 
+       
+        #balanceSection {
+            text-align: center;
+            margin: 40px 0;
+            font-size: 2rem;
             font-weight: bold;
         }
-        
+       
         .glow-pink { color: var(--shocking-pink); text-shadow: 0 0 15px var(--shocking-pink); }
         .glow-blue { color: var(--electric-blue); text-shadow: 0 0 15px var(--electric-blue); }
-        
+       
         video { width: 100%; border: 1px solid #444; margin-top: 20px; border-radius: 4px; }
         label { margin-top: 30px; display: block; color: #bf953f; font-size: 14px; }
     </style>
@@ -103,9 +103,9 @@
 
 <div class="container" id="regForm">
     <div id="statusIndicator">PENDING VERIFICATION</div>
-    
+   
     <h1>Business Registration</h1>
-    
+   
     <div id="balanceSection">
         <p>Tiffy Tokens: <span id="tokenDisplay" class="glow-pink">0.00</span></p>
         <p>Nitro TUSD: <span id="nitroDisplay" class="glow-blue">0.00</span></p>
@@ -113,22 +113,22 @@
 
     <input type="text" id="bizName" placeholder="Business Name">
     <input type="text" id="walletAddress" placeholder="TiffyAI Token or BNB Wallet Address">
-    
+   
     <h3>Identity Verification</h3>
     <video id="video" autoplay></video>
     <canvas id="canvas" class="hidden"></canvas>
     <button onclick="takeSelfie()">Capture ID Selfie</button>
-    
+   
     <label>Upload ID Card</label>
     <input type="file" id="idFile" accept="image/*,application/pdf">
-    
+   
     <button onclick="submitRegistration()">Commit to Ledger</button>
 </div>
 
 <div id="successMessage" class="hidden">
     <h1>Registration Successful</h1>
-    <p>Your business identity has been fingerprinted to the local ledger.</p>
-    <button onclick="window.location.reload()">Restart</button>
+    <p>Awesome! Your business identity has been fingerprinted to the local ledger. You are now allowed to upload your store to the Tiffyverse. If you have topped up your bank account with a minimum of $10 you good to go! </p>
+    <button onclick="window.location.reload()">Restart to check your status</button>
 </div>
 
 <script>
@@ -163,13 +163,13 @@
     async function submitRegistration() {
         const idFile = document.getElementById("idFile").files[0];
         if(!idFile) { alert("Please upload your ID Card."); return; }
-        
+       
         const data = `${document.getElementById("bizName").value}|${document.getElementById('walletAddress').value}|${Date.now()}`;
         const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
         const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        
+       
         localStorage.setItem("KYC_Verified_Hash", hashHex);
-        
+       
         document.getElementById('regForm').classList.add('hidden');
         document.getElementById('successMessage').classList.remove('hidden');
     }
