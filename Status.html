@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <script>
+        // This removes only the specific KYC status key
+        localStorage.removeItem("KYC_Verified_Hash");
+        
+        // Alert the user and close or redirect
+        alert("KYC Status has been cleared from local storage.");
+        window.close(); 
+    </script>
+</body>
+</html>
