@@ -202,9 +202,8 @@
 </div>
 
 <script>
-    const REGISTRY_REPO = "TiffyAI-USD/registry";
-    const REGISTRY_BRANCH = "main";
-    const FILE_PATH = "matchmaker_nodes.json";
+    // Hardcoded exact GitHub Pages live JSON endpoint
+    const REGISTRY_JSON_URL = "https://tiffyai-usd.github.io/registry/matchmaker_nodes.json";
 
     let activeMatchCandidate = null;
 
@@ -317,19 +316,11 @@
     }
 
     async function runLiveMatchmakerScan() {
-        const token = localStorage.getItem("Tiffy_GH_Token");
-        if (!token) {
-            speakAndType('aiOutput', "[ERROR] Access token missing. Please enter your token above.");
-            return;
-        }
-
-        speakAndType('aiOutput', "[AI BROKER] Polling TiffyAI registry root...");
+        speakAndType('aiOutput', "[AI BROKER] Polling TiffyAI registry via Pages...");
 
         try {
-            const url = `https://raw.githubusercontent.com/${REGISTRY_REPO}/${REGISTRY_BRANCH}/${FILE_PATH}?t=${Date.now()}`;
-            const response = await fetch(url, {
-                headers: { "Authorization": `Bearer ${token}` }
-            });
+            const url = `${REGISTRY_JSON_URL}?t=${Date.now()}`;
+            const response = await fetch(url);
 
             if (!response.ok) {
                 throw new Error(`Registry HTTP error: ${response.status}`);
