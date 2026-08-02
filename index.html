@@ -202,7 +202,6 @@
 </div>
 
 <script>
-    // Hardcoded exact GitHub Pages live JSON endpoint
     const REGISTRY_JSON_URL = "https://tiffyai-usd.github.io/registry/matchmaker_nodes.json";
 
     let activeMatchCandidate = null;
@@ -312,7 +311,7 @@
     function openAiInterface() {
         document.getElementById('aiTerminal').classList.remove('hidden');
         document.getElementById('launchAiBtn').classList.add('hidden');
-        speakAndType('aiOutput', "Tiffy AI Broker online. Audio channel unlocked. Ready to connect to the registry.");
+        speakAndType('aiOutput', "Tiffy AI Broker online. Audio channel unlocked. Ready to poll live registry.");
     }
 
     async function runLiveMatchmakerScan() {
@@ -329,13 +328,20 @@
             const registryNodes = await response.json();
             const myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
 
-            const candidates = registryNodes.filter(node => node.walletAddress !== myProfile.walletAddress);
+            // Filter out system init nodes or placeholder nodes that don't have real contact info or are yourself
+            const candidates = registryNodes.filter(node => 
+                node.walletAddress !== myProfile.walletAddress && 
+                node.bizName && 
+                node.bizName !== "System Initialization Node" &&
+                node.whatsappNumber && node.whatsappNumber.trim() !== ""
+            );
 
             if (candidates.length > 0) {
                 activeMatchCandidate = candidates[0];
                 speakAndType('aiOutput', `[MATCH FOUND] Connected with node: "${activeMatchCandidate.bizName}". Specialization: ${activeMatchCandidate.specialization}.`);
             } else {
-                speakAndType('aiOutput', `[SCAN COMPLETE] Registry queried successfully. No other peer nodes found yet.`);
+                speakAndType('aiOutput', `[SCAN COMPLETE] Queried registry. Only placeholder or system nodes found (or no active peer nodes with WhatsApp contact info yet).`);
+                activeMatchCandidate = null;
             }
 
         } catch (err) {
@@ -351,7 +357,13 @@
         }
 
         if (response === 'YES') {
-            speakAndType('aiOutput', `[SECURE BRIDGE OPENED] Establishing encrypted link with ${activeMatchCandidate.bizName}. WhatsApp contact: ${activeMatchCandidate.whatsappNumber || 'N/A'}`);
+            const rawPhone = activeMatchCandidate.whatsappNumber ? activeMatchCandidate.whatsappNumber.replace(/[^0-9]/g, '') : '';
+            if (rawPhone) {
+                speakAndType('aiOutput', `[SECURE BRIDGE OPENED] Launching WhatsApp chat with ${activeMatchCandidate.bizName}...`);
+                window.location.href = `https://wa.me/${rawPhone}?text=Hello%20${encodeURIComponent(activeMatchCandidate.bizName)},%20TiffyAI%20Broker%20matched%20our%20business%20nodes.`;
+            } else {
+                speakAndType('aiOutput', `[NOTICE] Match found (${activeMatchCandidate.bizName}), but no valid WhatsApp number was registered on their node profile.`);
+            }
         }
     }
 </script>
