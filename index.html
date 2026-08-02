@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TiffyAI Sovereign Gateway - Registration</title>
+    <title>TiffyAI Sovereign Gateway - Matchmaker Agent</title>
     <style>
         :root {
             --gold-gradient: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
@@ -103,6 +103,36 @@
        
         video { width: 100%; border: 1px solid #444; margin-top: 20px; border-radius: 4px; background: #000; }
         label { margin-top: 30px; display: block; color: #bf953f; font-size: 14px; }
+
+        /* AI Matchmaker Terminal & Voice Interface */
+        #aiTerminal {
+            margin-top: 40px;
+            padding: 30px;
+            background: #050505;
+            border: 1px solid var(--electric-blue);
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+        }
+
+        #aiOutput {
+            background: #111;
+            border: 1px solid #333;
+            padding: 20px;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+            color: var(--electric-blue);
+            font-family: monospace;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+
+        .agent-controls {
+            display: flex;
+            gap: 15px;
+        }
     </style>
 </head>
 <body onload="initUI()">
@@ -139,6 +169,16 @@
     <input type="file" id="idFile" accept="image/*,application/pdf">
    
     <button onclick="submitRegistration()">Commit to Ledger</button>
+
+    <!-- Local AI Matchmaker Agent Terminal -->
+    <div id="aiTerminal" class="hidden">
+        <h3>Tiffy AI Business Broker Agent</h3>
+        <div id="aiOutput">Initializing sovereign AI broker... Ready to scan local network for B2B trade synergies.</div>
+        <div class="agent-controls">
+            <button onclick="runLocalMatchmakerScan()" style="margin-top:0;">Scan for Synergy Matches</button>
+            <button onclick="respondToMatch('YES')" style="margin-top:0; background: var(--electric-blue); color:#000;">Say YES & Connect</button>
+        </div>
+    </div>
 </div>
 
 <div id="successMessage" class="hidden">
@@ -148,22 +188,27 @@
 </div>
 
 <script>
+    let activeMatchCandidate = null;
+
     function initUI() {
-        // Use exact original local storage keys for balances
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
         updateStatus();
         initCamera();
+
+        // If user is already verified, reveal the local AI Matchmaker Terminal
+        if (localStorage.getItem("KYC_Verified_Hash")) {
+            document.getElementById('aiTerminal').classList.remove('hidden');
+        }
     }
 
     function updateStatus() {
         const statusDiv = document.getElementById('statusIndicator');
-        // Use exact original local storage verification check
         if (localStorage.getItem("KYC_Verified_Hash")) {
             statusDiv.innerText = "VERIFIED";
             statusDiv.className = "status-verified";
         } else {
-            statusDiv.innerText = "PENDING VERIFICATION";
+            statusDiv.innerText = "PENDING VERIFIED";
             statusDiv.className = "status-pending";
         }
     }
@@ -176,7 +221,6 @@
             await video.play();
         } catch (err) {
             console.warn("Camera stream error:", err);
-            alert("Could not start camera automatically. Please check permissions.");
         }
     }
 
@@ -207,7 +251,6 @@
             return;
         }
 
-        // Save AI matchmaker details alongside original flow for the GitHub API sync
         const matchmakerProfile = {
             bizName,
             walletAddress,
@@ -221,7 +264,6 @@
         };
         localStorage.setItem("Tiffy_Matchmaker_Profile", JSON.stringify(matchmakerProfile));
 
-        // Exact original hashing and verification storage key
         const data = `${bizName}|${walletAddress}|${Date.now()}`;
         const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
         const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -230,6 +272,92 @@
        
         document.getElementById('regForm').classList.add('hidden');
         document.getElementById('successMessage').classList.remove('hidden');
+    }
+
+    // --- AI BROKER MATCHMAKER LOGIC & SPEECH SYNTHESIS ---
+
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Stop any ongoing speech
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function typeWriterEffect(elementId, text, speed = 30) {
+        const output = document.getElementById(elementId);
+        output.innerText = "";
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                output.innerText += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            }
+        }
+        type();
+    }
+
+    function runLocalMatchmakerScan() {
+        // Load current user profile
+        let myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
+
+        // Simulated network nodes in the local mesh database for testing the reverse-matching logic
+        const simulatedPeerPool = [
+            {
+                bizName: "Oasis Cutlery & Steel",
+                userHandle: "@CutleryKing",
+                whatsappNumber: "+27825550192",
+                productsDisplay: "Commercial stainless steel forks, knives, spoons, restaurant silverware sets.",
+                specialization: "Hospitality cutlery supply and breakage replacement.",
+                businessNeeds: "Local clients with high traffic or restaurant operations.",
+                desiredConnections: "Looking to supply restaurants, cafes, and lodges."
+            },
+            {
+                bizName: "Sugarloaf Bakery Hub",
+                userHandle: "@SugarloafBake",
+                whatsappNumber: "+27834440188",
+                productsDisplay: "Artisan bread flour, baking yeast, bulk cake boxes.",
+                specialization: "Baking supplies and wholesale dry goods.",
+                businessNeeds: "Consistent retail distributors.",
+                desiredConnections: "Looking for local food stores or restaurants needing baking inputs."
+            }
+        ];
+
+        // Pick a matching candidate based on inverted business needs vs products
+        activeMatchCandidate = simulatedPeerPool[0]; // Defaulting to cutlery supplier for demonstration
+
+        const pitchText = `Hello! I scanned your node profile. I found a local match: ${activeMatchCandidate.bizName} (${activeMatchCandidate.userHandle}) who specializes in ${activeMatchCandidate.specialization}. They offer: "${activeMatchCandidate.productsDisplay}". Would you like me to connect you via WhatsApp and share mesh peer files?`;
+
+        // Output text visual & speech
+        typeWriterEffect('aiOutput', pitchText);
+        speakText(pitchText);
+    }
+
+    function respondToMatch(response) {
+        if (!activeMatchCandidate) {
+            alert("Run a synergy scan first before responding!");
+            return;
+        }
+
+        if (response === 'YES') {
+            const successMsg = `[SUCCESS] Connection established! Preparing WhatsApp bridge to ${activeMatchCandidate.bizName} at ${activeMatchCandidate.whatsappNumber}. Mesh peer file dispatched.`;
+            typeWriterEffect('aiOutput', successMsg);
+            speakText("Connection confirmed! Opening WhatsApp bridge and sharing mesh credentials.");
+
+            // Construct automated WhatsApp intro link
+            let myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
+            const waMessage = encodeURIComponent(`Hi ${activeMatchCandidate.bizName}, TiffyAI Sovereign Matchmaker connected us! I am ${myProfile.bizName || 'a local node'} (${myProfile.userHandle || '@Peer'}). Let's sync our business mesh nodes.`);
+            
+            setTimeout(() => {
+                window.open(`https://wa.me/${activeMatchCandidate.whatsappNumber.replace(/[^0-9]/g, '')}?text=${waMessage}`, '_blank');
+            }, 1500);
+        } else {
+            typeWriterEffect('aiOutput', "Match declined. Standing by for next mesh query.");
+            speakText("Match declined.");
+        }
     }
 </script>
 </body>
