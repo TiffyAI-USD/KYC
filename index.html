@@ -182,12 +182,10 @@
 
     <!-- GitHub Registry Configuration Panel -->
     <div id="githubSetupPanel">
-        <h3>GitHub Registry Sync Configuration</h3>
-        <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: -15px; margin-bottom: 20px;">Link your repository endpoint to feed and poll live B2B trade data.</p>
-        <input type="text" id="ghRepo" placeholder="GitHub Repository (e.g. username/repo-name)">
-        <input type="text" id="ghBranch" placeholder="Branch (e.g. main)" value="main">
-        <input type="password" id="ghToken" placeholder="GitHub Personal Access Token (PAT)">
-        <button onclick="saveGitHubConfig()" style="background: var(--electric-blue); color: #000;">Save GitHub Credentials</button>
+        <h3>TiffyAI Network Synchronization</h3>
+        <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: -15px; margin-bottom: 20px;">Enter your network access token to link your node to the TiffyAI registry.</p>
+        <input type="password" id="ghToken" placeholder="Enter Your Access Token">
+        <button onclick="saveGitHubConfig()" style="background: var(--electric-blue); color: #000;">Save Credentials</button>
     </div>
 
     <!-- AI Launch Button -->
@@ -196,9 +194,9 @@
     <!-- Local AI Matchmaker Agent Terminal -->
     <div id="aiTerminal" class="hidden">
         <h3>Tiffy AI Business Broker Agent</h3>
-        <div id="aiOutput">Audio engine active. Sovereign AI broker online. Ready to poll live GitHub registry.</div>
+        <div id="aiOutput">Audio engine active. Sovereign AI broker online. Ready to poll live registry.</div>
         <div class="agent-controls">
-            <button onclick="runLiveMatchmakerScan()" style="margin-top:0;">Scan GitHub Registry</button>
+            <button onclick="runLiveMatchmakerScan()" style="margin-top:0;">Scan Registry</button>
             <button onclick="respondToMatch('YES')" style="margin-top:0; background: var(--electric-blue); color:#000;">Say YES & Connect</button>
         </div>
     </div>
@@ -206,11 +204,15 @@
 
 <div id="successMessage" class="hidden">
     <h1>Registration Successful</h1>
-    <p>Awesome! Your business identity has been fingerprinted to the local ledger. Your node is registered to feed the GitHub sync engine for AI trade matchmaking. If you have topped up your bank account with a minimum of $10 you good to go!</p>
+    <p>Awesome! Your business identity has been fingerprinted to the local ledger. Your node is registered to feed the registry sync engine for AI trade matchmaking. If you have topped up your bank account with a minimum of $10 you good to go!</p>
     <button onclick="window.location.reload()">Restart to check your status</button>
 </div>
 
 <script>
+    // Hardcoded registry constants (ready to be swapped for a custom domain later)
+    const REGISTRY_REPO = "TiffyAI-USD/registry";
+    const REGISTRY_BRANCH = "main";
+
     let activeMatchCandidate = null;
     let availableVoices = [];
 
@@ -221,13 +223,7 @@
         initCamera();
         loadVoices();
 
-        // Load saved GitHub config if present
-        if (localStorage.getItem("Tiffy_GH_Repo")) {
-            document.getElementById('ghRepo').value = localStorage.getItem("Tiffy_GH_Repo");
-        }
-        if (localStorage.getItem("Tiffy_GH_Branch")) {
-            document.getElementById('ghBranch').value = localStorage.getItem("Tiffy_GH_Branch");
-        }
+        // Load saved token if present
         if (localStorage.getItem("Tiffy_GH_Token")) {
             document.getElementById('ghToken').value = localStorage.getItem("Tiffy_GH_Token");
         }
@@ -238,20 +234,18 @@
     }
 
     function saveGitHubConfig() {
-        const repo = document.getElementById('ghRepo').value.trim();
-        const branch = document.getElementById('ghBranch').value.trim() || "main";
         const token = document.getElementById('ghToken').value.trim();
 
-        if (!repo || !token) {
-            alert("Please provide both your GitHub Repository and Access Token.");
+        if (!token) {
+            alert("Please provide your Access Token.");
             return;
         }
 
-        localStorage.setItem("Tiffy_GH_Repo", repo);
-        localStorage.setItem("Tiffy_GH_Branch", branch);
+        localStorage.setItem("Tiffy_GH_Repo", REGISTRY_REPO);
+        localStorage.setItem("Tiffy_GH_Branch", REGISTRY_BRANCH);
         localStorage.setItem("Tiffy_GH_Token", token);
 
-        alert("GitHub Registry Synchronization Credentials Saved to Local Storage!");
+        alert("Credentials Saved! Node linked to TiffyAI network.");
     }
 
     function loadVoices() {
@@ -410,29 +404,26 @@
         document.getElementById('aiTerminal').classList.remove('hidden');
         document.getElementById('launchAiBtn').classList.add('hidden');
 
-        const greeting = "Tiffy AI Broker online. Audio channel unlocked. Ready to connect to the GitHub registry.";
+        const greeting = "Tiffy AI Broker online. Audio channel unlocked. Ready to connect to the registry.";
         speakAndType('aiOutput', greeting, 35);
     }
 
-    // --- LIVE GITHUB REGISTRY POLL & SYNC ENGINE ---
+    // --- LIVE REGISTRY POLL & SYNC ENGINE ---
     async function runLiveMatchmakerScan() {
-        const repo = localStorage.getItem("Tiffy_GH_Repo");
-        const branch = localStorage.getItem("Tiffy_GH_Branch") || "main";
         const token = localStorage.getItem("Tiffy_GH_Token");
 
-        if (!repo || !token) {
-            const errNotice = "[ERROR] GitHub credentials missing. Please configure your repository and PAT above.";
+        if (!token) {
+            const errNotice = "[ERROR] Access token missing. Please enter your token above.";
             speakAndType('aiOutput', errNotice, 30);
             return;
         }
 
-        const scanningMsg = `[AI BROKER] Polling GitHub registry (${repo}@${branch}). Fetching peer nodes...`;
+        const scanningMsg = `[AI BROKER] Polling TiffyAI registry. Fetching peer nodes...`;
         speakAndType('aiOutput', scanningMsg, 30);
 
         try {
-            // Example target path for peer nodes JSON registry inside the repo
             const path = "registry/matchmaker_nodes.json";
-            const url = `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`;
+            const url = `https://api.github.com/repos/${REGISTRY_REPO}/contents/${path}?ref=${REGISTRY_BRANCH}`;
 
             const response = await fetch(url, {
                 headers: {
@@ -442,7 +433,7 @@
             });
 
             if (!response.ok) {
-                throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+                throw new Error(`Registry API error: ${response.status} ${response.statusText}`);
             }
 
             const fileData = await response.json();
@@ -464,15 +455,15 @@
             }
 
         } catch (err) {
-            console.error("GitHub sync failure:", err);
-            const failMsg = `[SYNC FAILED] Could not pull from GitHub registry. Check console logs and token permissions.`;
+            console.error("Registry sync failure:", err);
+            const failMsg = `[SYNC FAILED] Could not pull from registry. Check token permissions.`;
             speakAndType('aiOutput', failMsg, 30);
         }
     }
 
     function respondToMatch(response) {
         if (!activeMatchCandidate) {
-            const infoMsg = "[INFO] No active peer session linked yet. Run a successful GitHub Registry scan first.";
+            const infoMsg = "[INFO] No active peer session linked yet. Run a successful Registry scan first.";
             speakAndType('aiOutput', infoMsg, 35);
             return;
         }
