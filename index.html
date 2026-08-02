@@ -118,15 +118,16 @@
             background: #111;
             border: 1px solid #333;
             padding: 20px;
-            min-height: 100px;
-            max-height: 200px;
+            min-height: 120px;
+            max-height: 220px;
             overflow-y: auto;
             color: var(--electric-blue);
             font-family: monospace;
             font-size: 16px;
             margin-bottom: 20px;
             border-radius: 4px;
-            line-height: 1.5;
+            line-height: 1.6;
+            white-space: pre-wrap;
         }
 
         .agent-controls {
@@ -170,12 +171,15 @@
    
     <button onclick="submitRegistration()">Commit to Ledger</button>
 
+    <!-- AI Launch Button -->
+    <button id="launchAiBtn" class="hidden" onclick="openAiInterface()" style="background: var(--electric-blue); color: #000; margin-top: 30px;">Launch TiffyAI Broker Interface</button>
+
     <!-- Local AI Matchmaker Agent Terminal -->
     <div id="aiTerminal" class="hidden">
         <h3>Tiffy AI Business Broker Agent</h3>
-        <div id="aiOutput">Initializing sovereign AI broker... Ready to scan local network for B2B trade synergies.</div>
+        <div id="aiOutput">Audio engine active. Sovereign AI broker online. Ready to poll live GitHub registry.</div>
         <div class="agent-controls">
-            <button onclick="runLocalMatchmakerScan()" style="margin-top:0;">Scan for Synergy Matches</button>
+            <button onclick="runLiveMatchmakerScan()" style="margin-top:0;">Scan GitHub Registry</button>
             <button onclick="respondToMatch('YES')" style="margin-top:0; background: var(--electric-blue); color:#000;">Say YES & Connect</button>
         </div>
     </div>
@@ -183,23 +187,99 @@
 
 <div id="successMessage" class="hidden">
     <h1>Registration Successful</h1>
-    <p>Awesome! Your business identity has been fingerprinted to the local ledger. You are now allowed to upload your store to the Tiffyverse. If you have topped up your bank account with a minimum of $10 you good to go! </p>
+    <p>Awesome! Your business identity has been fingerprinted to the local ledger. Your node is registered to feed the GitHub sync engine for AI trade matchmaking. If you have topped up your bank account with a minimum of $10 you good to go!</p>
     <button onclick="window.location.reload()">Restart to check your status</button>
 </div>
 
 <script>
     let activeMatchCandidate = null;
+    let availableVoices = [];
 
     function initUI() {
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
         updateStatus();
         initCamera();
+        loadVoices();
 
-        // If user is already verified, reveal the local AI Matchmaker Terminal
         if (localStorage.getItem("KYC_Verified_Hash")) {
-            document.getElementById('aiTerminal').classList.remove('hidden');
+            document.getElementById('launchAiBtn').classList.remove('hidden');
         }
+    }
+
+    function loadVoices() {
+        if (!('speechSynthesis' in window)) return;
+        availableVoices = window.speechSynthesis.getVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                availableVoices = window.speechSynthesis.getVoices();
+            };
+        }
+    }
+
+    // STRICT HARDWARE-LOCKED TIMING PIPELINE
+    // The browser's speech hardware MUST fire and trigger its 'onstart' event 
+    // BEFORE a single character of text is allowed to render on the screen.
+    function speakAndType(elementId, text, speed = 35) {
+        const outputBox = document.getElementById(elementId);
+        outputBox.innerText = ""; // Clear immediately
+
+        if (!('speechSynthesis' in window)) {
+            typeWriterEffect(elementId, text, speed);
+            return;
+        }
+
+        // Force-kill any lingering queues or stuck utterances
+        window.speechSynthesis.cancel();
+
+        if (availableVoices.length === 0) {
+            availableVoices = window.speechSynthesis.getVoices();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        if (availableVoices.length > 0) {
+            const voice = availableVoices.find(v => v.lang && v.lang.toLowerCase().includes('en')) || availableVoices[0];
+            utterance.voice = voice;
+        }
+
+        let hasStartedTyping = false;
+
+        // CRITICAL SYNC: Typewriter only starts AFTER the OS audio hardware actually begins speaking
+        utterance.onstart = () => {
+            if (!hasStartedTyping) {
+                hasStartedTyping = true;
+                typeWriterEffect(elementId, text, speed);
+            }
+        };
+
+        // SAFETY FALLBACK: If the browser's speech hardware blocks onstart, 
+        // force-start typing after 400ms so the UI doesn't hang indefinitely.
+        const safetyFallback = setTimeout(() => {
+            if (!hasStartedTyping) {
+                hasStartedTyping = true;
+                typeWriterEffect(elementId, text, speed);
+            }
+        }, 400);
+
+        utterance.onend = () => {
+            clearTimeout(safetyFallback);
+        };
+
+        utterance.onerror = (e) => {
+            console.warn("Speech synthesis hardware error:", e);
+            clearTimeout(safetyFallback);
+            if (!hasStartedTyping) {
+                hasStartedTyping = true;
+                typeWriterEffect(elementId, text, speed);
+            }
+        };
+
+        // Fire the sovereign audio pipeline into the browser buffer
+        window.speechSynthesis.speak(utterance);
     }
 
     function updateStatus() {
@@ -208,7 +288,7 @@
             statusDiv.innerText = "VERIFIED";
             statusDiv.className = "status-verified";
         } else {
-            statusDiv.innerText = "PENDING VERIFIED";
+            statusDiv.innerText = "PENDING VERIFICATION";
             statusDiv.className = "status-pending";
         }
     }
@@ -274,19 +354,7 @@
         document.getElementById('successMessage').classList.remove('hidden');
     }
 
-    // --- AI BROKER MATCHMAKER LOGIC & SPEECH SYNTHESIS ---
-
-    function speakText(text) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Stop any ongoing speech
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-            window.speechSynthesis.speak(utterance);
-        }
-    }
-
-    function typeWriterEffect(elementId, text, speed = 30) {
+    function typeWriterEffect(elementId, text, speed = 35) {
         const output = document.getElementById(elementId);
         output.innerText = "";
         let i = 0;
@@ -300,63 +368,28 @@
         type();
     }
 
-    function runLocalMatchmakerScan() {
-        // Load current user profile
-        let myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
+    function openAiInterface() {
+        document.getElementById('aiTerminal').classList.remove('hidden');
+        document.getElementById('launchAiBtn').classList.add('hidden');
 
-        // Simulated network nodes in the local mesh database for testing the reverse-matching logic
-        const simulatedPeerPool = [
-            {
-                bizName: "Oasis Cutlery & Steel",
-                userHandle: "@CutleryKing",
-                whatsappNumber: "+27825550192",
-                productsDisplay: "Commercial stainless steel forks, knives, spoons, restaurant silverware sets.",
-                specialization: "Hospitality cutlery supply and breakage replacement.",
-                businessNeeds: "Local clients with high traffic or restaurant operations.",
-                desiredConnections: "Looking to supply restaurants, cafes, and lodges."
-            },
-            {
-                bizName: "Sugarloaf Bakery Hub",
-                userHandle: "@SugarloafBake",
-                whatsappNumber: "+27834440188",
-                productsDisplay: "Artisan bread flour, baking yeast, bulk cake boxes.",
-                specialization: "Baking supplies and wholesale dry goods.",
-                businessNeeds: "Consistent retail distributors.",
-                desiredConnections: "Looking for local food stores or restaurants needing baking inputs."
-            }
-        ];
+        const greeting = "Tiffy AI Broker online. Audio channel unlocked. Ready to connect to the GitHub registry.";
+        speakAndType('aiOutput', greeting, 35);
+    }
 
-        // Pick a matching candidate based on inverted business needs vs products
-        activeMatchCandidate = simulatedPeerPool[0]; // Defaulting to cutlery supplier for demonstration
+    function runLiveMatchmakerScan() {
+        const myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
+        const myBiz = document.getElementById("bizName").value || myProfile.bizName || "Your Node";
 
-        const pitchText = `Hello! I scanned your node profile. I found a local match: ${activeMatchCandidate.bizName} (${activeMatchCandidate.userHandle}) who specializes in ${activeMatchCandidate.specialization}. They offer: "${activeMatchCandidate.productsDisplay}". Would you like me to connect you via WhatsApp and share mesh peer files?`;
-
-        // Output text visual & speech
-        typeWriterEffect('aiOutput', pitchText);
-        speakText(pitchText);
+        const scanMessage = `[AI BROKER] Polling GitHub registry for node "${myBiz}". Awaiting live JSON endpoint connection to execute semantic matchmaking.`;
+        
+        speakAndType('aiOutput', scanMessage, 30);
     }
 
     function respondToMatch(response) {
         if (!activeMatchCandidate) {
-            alert("Run a synergy scan first before responding!");
+            const infoMsg = "[INFO] No active peer session linked yet. Connect GitHub JSON endpoint to begin live B2B matchmaking.";
+            speakAndType('aiOutput', infoMsg, 35);
             return;
-        }
-
-        if (response === 'YES') {
-            const successMsg = `[SUCCESS] Connection established! Preparing WhatsApp bridge to ${activeMatchCandidate.bizName} at ${activeMatchCandidate.whatsappNumber}. Mesh peer file dispatched.`;
-            typeWriterEffect('aiOutput', successMsg);
-            speakText("Connection confirmed! Opening WhatsApp bridge and sharing mesh credentials.");
-
-            // Construct automated WhatsApp intro link
-            let myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
-            const waMessage = encodeURIComponent(`Hi ${activeMatchCandidate.bizName}, TiffyAI Sovereign Matchmaker connected us! I am ${myProfile.bizName || 'a local node'} (${myProfile.userHandle || '@Peer'}). Let's sync our business mesh nodes.`);
-            
-            setTimeout(() => {
-                window.open(`https://wa.me/${activeMatchCandidate.whatsappNumber.replace(/[^0-9]/g, '')}?text=${waMessage}`, '_blank');
-            }, 1500);
-        } else {
-            typeWriterEffect('aiOutput', "Match declined. Standing by for next mesh query.");
-            speakText("Match declined.");
         }
     }
 </script>
