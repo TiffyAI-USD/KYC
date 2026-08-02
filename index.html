@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -25,7 +25,7 @@
 
         .container {
             width: 100%;
-            max-width: 900px; /* Restored to larger, wider scale */
+            max-width: 900px;
             padding: 60px;
             background: #0a0a0a;
             border: 1px solid #333;
@@ -41,7 +41,7 @@
             margin-bottom: 30px;
         }
 
-        input {
+        input, textarea {
             width: 100%;
             padding: 22px;
             margin-top: 20px;
@@ -51,6 +51,12 @@
             color: #fff;
             box-sizing: border-box;
             font-size: 18px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
         }
 
         button {
@@ -95,14 +101,14 @@
         .glow-pink { color: var(--shocking-pink); text-shadow: 0 0 15px var(--shocking-pink); }
         .glow-blue { color: var(--electric-blue); text-shadow: 0 0 15px var(--electric-blue); }
        
-        video { width: 100%; border: 1px solid #444; margin-top: 20px; border-radius: 4px; }
+        video { width: 100%; border: 1px solid #444; margin-top: 20px; border-radius: 4px; background: #000; }
         label { margin-top: 30px; display: block; color: #bf953f; font-size: 14px; }
     </style>
 </head>
 <body onload="initUI()">
 
 <div class="container" id="regForm">
-    <div id="statusIndicator">PENDING VERIFICATION</div>
+    <div id="statusIndicator" class="status-pending">PENDING VERIFICATION</div>
    
     <h1>Business Registration</h1>
    
@@ -111,11 +117,21 @@
         <p>Nitro TUSD: <span id="nitroDisplay" class="glow-blue">0.00</span></p>
     </div>
 
+    <!-- Original Base Fields -->
     <input type="text" id="bizName" placeholder="Business Name">
     <input type="text" id="walletAddress" placeholder="TiffyAI Token or BNB Wallet Address">
    
+    <!-- Added AI Matchmaker Fields -->
+    <input type="text" id="userHandle" placeholder="User Handle (e.g. @StoreName)">
+    <input type="text" id="whatsappNumber" placeholder="WhatsApp Number (with country code)">
+    
+    <textarea id="productsDisplay" placeholder="Products on display (What items/goods/inventory do you offer?)"></textarea>
+    <textarea id="specialization" placeholder="What do you specialize in?"></textarea>
+    <textarea id="businessNeeds" placeholder="What would you need in business to succeed?"></textarea>
+    <textarea id="desiredConnections" placeholder="What kind of business connections do you want to make here? (For AI B2B matchmaking)"></textarea>
+
     <h3>Identity Verification</h3>
-    <video id="video" autoplay></video>
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas" class="hidden"></canvas>
     <button onclick="takeSelfie()">Capture ID Selfie</button>
    
@@ -133,13 +149,16 @@
 
 <script>
     function initUI() {
+        // Use exact original local storage keys for balances
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
         updateStatus();
+        initCamera();
     }
 
     function updateStatus() {
         const statusDiv = document.getElementById('statusIndicator');
+        // Use exact original local storage verification check
         if (localStorage.getItem("KYC_Verified_Hash")) {
             statusDiv.innerText = "VERIFIED";
             statusDiv.className = "status-verified";
@@ -149,22 +168,61 @@
         }
     }
 
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            const video = document.getElementById('video');
+            video.srcObject = stream;
+            await video.play();
+        } catch (err) {
+            console.warn("Camera stream error:", err);
+            alert("Could not start camera automatically. Please check permissions.");
+        }
+    }
+
     async function takeSelfie() {
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.classList.remove('hidden');
-        alert("Selfie Captured!");
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.classList.remove('hidden');
+            alert("Selfie Captured!");
+        } else {
+            alert("Video feed not active yet. Please wait a second for the camera to load.");
+        }
     }
 
     async function submitRegistration() {
         const idFile = document.getElementById("idFile").files[0];
         if(!idFile) { alert("Please upload your ID Card."); return; }
        
-        const data = `${document.getElementById("bizName").value}|${document.getElementById('walletAddress').value}|${Date.now()}`;
+        const bizName = document.getElementById("bizName").value;
+        const walletAddress = document.getElementById('walletAddress').value;
+
+        if(!bizName || !walletAddress) {
+            alert("Please fill in your Business Name and Wallet Address.");
+            return;
+        }
+
+        // Save AI matchmaker details alongside original flow for the GitHub API sync
+        const matchmakerProfile = {
+            bizName,
+            walletAddress,
+            userHandle: document.getElementById("userHandle").value,
+            whatsappNumber: document.getElementById("whatsappNumber").value,
+            productsDisplay: document.getElementById("productsDisplay").value,
+            specialization: document.getElementById("specialization").value,
+            businessNeeds: document.getElementById("businessNeeds").value,
+            desiredConnections: document.getElementById("desiredConnections").value,
+            timestamp: Date.now()
+        };
+        localStorage.setItem("Tiffy_Matchmaker_Profile", JSON.stringify(matchmakerProfile));
+
+        // Exact original hashing and verification storage key
+        const data = `${bizName}|${walletAddress}|${Date.now()}`;
         const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
         const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
        
@@ -173,10 +231,6 @@
         document.getElementById('regForm').classList.add('hidden');
         document.getElementById('successMessage').classList.remove('hidden');
     }
-
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-        document.getElementById('video').srcObject = stream;
-    });
 </script>
 </body>
 </html>
