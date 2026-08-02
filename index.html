@@ -104,6 +104,7 @@
         video { width: 100%; border: 1px solid #444; margin-top: 20px; border-radius: 4px; background: #000; }
         label { margin-top: 30px; display: block; color: #bf953f; font-size: 14px; }
 
+        /* AI Matchmaker Terminal & Voice Interface */
         #aiTerminal {
             margin-top: 40px;
             padding: 30px;
@@ -134,6 +135,7 @@
             gap: 15px;
         }
 
+        /* GitHub Setup Panel */
         #githubSetupPanel {
             margin-top: 30px;
             padding: 25px;
@@ -155,9 +157,11 @@
         <p>Nitro TUSD: <span id="nitroDisplay" class="glow-blue">0.00</span></p>
     </div>
 
+    <!-- Original Base Fields -->
     <input type="text" id="bizName" placeholder="Business Name">
     <input type="text" id="walletAddress" placeholder="TiffyAI Token or BNB Wallet Address">
    
+    <!-- Added AI Matchmaker Fields -->
     <input type="text" id="userHandle" placeholder="User Handle (e.g. @StoreName)">
     <input type="text" id="whatsappNumber" placeholder="WhatsApp Number (with country code)">
     
@@ -176,6 +180,7 @@
    
     <button onclick="submitRegistration()">Commit to Ledger</button>
 
+    <!-- GitHub Registry Configuration Panel -->
     <div id="githubSetupPanel">
         <h3>TiffyAI Network Synchronization</h3>
         <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: -15px; margin-bottom: 20px;">Enter your network access token to link your node to the TiffyAI registry.</p>
@@ -183,8 +188,10 @@
         <button onclick="saveGitHubConfig()" style="background: var(--electric-blue); color: #000;">Save Credentials</button>
     </div>
 
+    <!-- AI Launch Button -->
     <button id="launchAiBtn" class="hidden" onclick="openAiInterface()" style="background: var(--electric-blue); color: #000; margin-top: 30px;">Launch TiffyAI Broker Interface</button>
 
+    <!-- Local AI Matchmaker Agent Terminal -->
     <div id="aiTerminal" class="hidden">
         <h3>Tiffy AI Business Broker Agent</h3>
         <div id="aiOutput">Audio engine active. Sovereign AI broker online. Ready to poll live registry.</div>
@@ -197,20 +204,24 @@
 
 <div id="successMessage" class="hidden">
     <h1>Registration Successful</h1>
-    <p>Awesome! Your business identity has been fingerprinted to the local ledger. Your node is registered to feed the registry sync engine for AI trade matchmaking!</p>
+    <p>Awesome! Your business identity has been fingerprinted to the local ledger. Your node is registered to feed the registry sync engine for AI trade matchmaking. If you have topped up your bank account with a minimum of $10 you good to go!</p>
     <button onclick="window.location.reload()">Restart to check your status</button>
 </div>
 
 <script>
-    const REGISTRY_JSON_URL = "https://tiffyai-usd.github.io/registry/matchmaker_nodes.json";
+    const REGISTRY_REPO = "TiffyAI-USD/registry";
+    const REGISTRY_BRANCH = "main";
+    const REGISTRY_PATH = "registry/matchmaker_nodes.json";
 
     let activeMatchCandidate = null;
+    let availableVoices = [];
 
     function initUI() {
         document.getElementById('tokenDisplay').innerText = localStorage.getItem("Tiffy_Harvest_Pending") || "0.00";
         document.getElementById('nitroDisplay').innerText = localStorage.getItem("TUSD_Nitro_Storage") || "0.00";
         updateStatus();
         initCamera();
+        loadVoices();
 
         if (localStorage.getItem("Tiffy_GH_Token")) {
             document.getElementById('ghToken').value = localStorage.getItem("Tiffy_GH_Token");
@@ -223,16 +234,71 @@
 
     function saveGitHubConfig() {
         const token = document.getElementById('ghToken').value.trim();
+
         if (!token) {
             alert("Please provide your Access Token.");
             return;
         }
+
+        localStorage.setItem("Tiffy_GH_Repo", REGISTRY_REPO);
+        localStorage.setItem("Tiffy_GH_Branch", REGISTRY_BRANCH);
         localStorage.setItem("Tiffy_GH_Token", token);
+
         alert("Credentials Saved! Node linked to TiffyAI network.");
     }
 
-    function speakAndType(elementId, text) {
-        document.getElementById(elementId).innerText = text;
+    function loadVoices() {
+        if (!('speechSynthesis' in window)) return;
+        availableVoices = window.speechSynthesis.getVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                availableVoices = window.speechSynthesis.getVoices();
+            };
+        }
+    }
+
+    function speakAndType(elementId, text, speed = 35) {
+        const outputBox = document.getElementById(elementId);
+        outputBox.innerText = "";
+
+        if (!('speechSynthesis' in window)) {
+            typeWriterEffect(elementId, text, speed);
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        if (availableVoices.length === 0) {
+            availableVoices = window.speechSynthesis.getVoices();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        if (availableVoices.length > 0) {
+            const voice = availableVoices.find(v => v.lang && v.lang.toLowerCase().includes('en')) || availableVoices[0];
+            utterance.voice = voice;
+        }
+
+        let hasStartedTyping = false;
+
+        utterance.onstart = () => {
+            if (!hasStartedTyping) {
+                hasStartedTyping = true;
+                typeWriterEffect(elementId, text, speed);
+            }
+        };
+
+        const safetyFallback = setTimeout(() => {
+            if (!hasStartedTyping) {
+                hasStartedTyping = true;
+                typeWriterEffect(elementId, text, speed);
+            }
+        }, 400);
+
+        window.speechSynthesis.speak(utterance);
     }
 
     function updateStatus() {
@@ -272,15 +338,22 @@
         }
     }
 
+    // --- APPEND-ONLY GITHUB LEDGER COMMIT ENGINE ---
     async function submitRegistration() {
         const idFile = document.getElementById("idFile").files[0];
         if(!idFile) { alert("Please upload your ID Card."); return; }
        
         const bizName = document.getElementById("bizName").value;
         const walletAddress = document.getElementById('walletAddress').value;
+        const token = localStorage.getItem("Tiffy_GH_Token");
 
         if(!bizName || !walletAddress) {
             alert("Please fill in your Business Name and Wallet Address.");
+            return;
+        }
+
+        if(!token) {
+            alert("Please save your GitHub Access Token in the network synchronization panel below first.");
             return;
         }
 
@@ -293,77 +366,172 @@
             specialization: document.getElementById("specialization").value,
             businessNeeds: document.getElementById("businessNeeds").value,
             desiredConnections: document.getElementById("desiredConnections").value,
-            timestamp: new Date().toISOString()
+            timestamp: Date.now()
         };
-        
-        localStorage.setItem("Tiffy_Matchmaker_Profile", JSON.stringify(matchmakerProfile));
 
-        const data = `${bizName}|${walletAddress}|${Date.now()}`;
-        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
-        const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-       
-        localStorage.setItem("KYC_Verified_Hash", hashHex);
-       
-        document.getElementById('regForm').classList.add('hidden');
-        document.getElementById('successMessage').classList.remove('hidden');
+        try {
+            const apiUrl = `https://api.github.com/repos/${REGISTRY_REPO}/contents/${REGISTRY_PATH}`;
+            
+            // 1. Fetch current file to get SHA and existing nodes array
+            const getRes = await fetch(`${apiUrl}?ref=${REGISTRY_BRANCH}`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github+json"
+                }
+            });
+
+            let nodesList = [];
+            let fileSha = null;
+
+            if (getRes.ok) {
+                const fileData = await getRes.json();
+                fileSha = fileData.sha;
+                try {
+                    const decodedBytes = Uint8Array.from(atob(fileData.content), c => c.charCodeAt(0));
+                    const decodedString = new TextDecoder().decode(decodedBytes);
+                    nodesList = JSON.parse(decodedString);
+                    if (!Array.isArray(nodesList)) {
+                        nodesList = [];
+                    }
+                } catch (e) {
+                    nodesList = [];
+                }
+            }
+
+            // 2. Append new node profile safely without overwriting past history
+            nodesList.push(matchmakerProfile);
+
+            // 3. Encode updated registry stack back to Base64
+            const jsonString = JSON.stringify(nodesList, null, 4);
+            const base64Content = btoa(unescape(encodeURIComponent(jsonString)));
+
+            // 4. Commit push back to GitHub repository
+            const putPayload = {
+                message: `TiffyAI Ledger Commit: Registered node ${bizName}`,
+                content: base64Content,
+                branch: REGISTRY_BRANCH
+            };
+
+            if (fileSha) {
+                putPayload.sha = fileSha;
+            }
+
+            const putRes = await fetch(apiUrl, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github+json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(putPayload)
+            });
+
+            if (!putRes.ok) {
+                const errJson = await putRes.json();
+                throw new Error(errJson.message || "Failed to commit to GitHub ledger.");
+            }
+
+            localStorage.setItem("Tiffy_Matchmaker_Profile", JSON.stringify(matchmakerProfile));
+
+            const dataStr = `${bizName}|${walletAddress}|${Date.now()}`;
+            const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(dataStr));
+            const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+           
+            localStorage.setItem("KYC_Verified_Hash", hashHex);
+           
+            document.getElementById('regForm').classList.add('hidden');
+            document.getElementById('successMessage').classList.remove('hidden');
+
+        } catch (err) {
+            console.error("Ledger commit error:", err);
+            alert("Registry sync commit failed: " + err.message);
+        }
+    }
+
+    function typeWriterEffect(elementId, text, speed = 35) {
+        const output = document.getElementById(elementId);
+        output.innerText = "";
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                output.innerText += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            }
+        }
+        type();
     }
 
     function openAiInterface() {
         document.getElementById('aiTerminal').classList.remove('hidden');
         document.getElementById('launchAiBtn').classList.add('hidden');
-        speakAndType('aiOutput', "Tiffy AI Broker online. Audio channel unlocked. Ready to poll live registry.");
+
+        const greeting = "Tiffy AI Broker online. Audio channel unlocked. Ready to connect to the registry.";
+        speakAndType('aiOutput', greeting, 35);
     }
 
+    // --- LIVE REGISTRY POLL & SYNC ENGINE ---
     async function runLiveMatchmakerScan() {
-        speakAndType('aiOutput', "[AI BROKER] Polling TiffyAI registry via Pages...");
+        const token = localStorage.getItem("Tiffy_GH_Token");
+
+        if (!token) {
+            const errNotice = "[ERROR] Access token missing. Please enter your token above.";
+            speakAndType('aiOutput', errNotice, 30);
+            return;
+        }
+
+        const scanningMsg = `[AI BROKER] Polling TiffyAI registry. Fetching peer nodes...`;
+        speakAndType('aiOutput', scanningMsg, 30);
 
         try {
-            const url = `${REGISTRY_JSON_URL}?t=${Date.now()}`;
-            const response = await fetch(url);
+            const url = `https://api.github.com/repos/${REGISTRY_REPO}/contents/${REGISTRY_PATH}?ref=${REGISTRY_BRANCH}`;
+
+            const response = await fetch(url, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github+json"
+                }
+            });
 
             if (!response.ok) {
-                throw new Error(`Registry HTTP error: ${response.status}`);
+                throw new Error(`Registry API error: ${response.status} ${response.statusText}`);
             }
 
-            const registryNodes = await response.json();
+            const fileData = await response.json();
+            const decodedBytes = Uint8Array.from(atob(fileData.content), c => c.charCodeAt(0));
+            const decodedContent = new TextDecoder().decode(decodedBytes);
+            const registryNodes = JSON.parse(decodedContent);
+
             const myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
 
-            // Filter out system init nodes or placeholder nodes that don't have real contact info or are yourself
-            const candidates = registryNodes.filter(node => 
-                node.walletAddress !== myProfile.walletAddress && 
-                node.bizName && 
-                node.bizName !== "System Initialization Node" &&
-                node.whatsappNumber && node.whatsappNumber.trim() !== ""
-            );
+            const candidates = registryNodes.filter(node => node.walletAddress !== myProfile.walletAddress);
 
             if (candidates.length > 0) {
                 activeMatchCandidate = candidates[0];
-                speakAndType('aiOutput', `[MATCH FOUND] Connected with node: "${activeMatchCandidate.bizName}". Specialization: ${activeMatchCandidate.specialization}.`);
+                const matchMsg = `[MATCH FOUND] Connected with node: "${activeMatchCandidate.bizName}". Specialization: ${activeMatchCandidate.specialization}. Press 'Say YES & Connect' to establish secure channel.`;
+                speakAndType('aiOutput', matchMsg, 30);
             } else {
-                speakAndType('aiOutput', `[SCAN COMPLETE] Queried registry. Only placeholder or system nodes found (or no active peer nodes with WhatsApp contact info yet).`);
-                activeMatchCandidate = null;
+                const noMatchMsg = `[SCAN COMPLETE] Registry queried successfully. No active peer nodes found matching criteria at this moment.`;
+                speakAndType('aiOutput', noMatchMsg, 30);
             }
 
         } catch (err) {
             console.error("Registry sync failure:", err);
-            speakAndType('aiOutput', `[SYNC FAILED] ${err.message}`);
+            const failMsg = `[SYNC FAILED] Could not pull from registry. Check token permissions.`;
+            speakAndType('aiOutput', failMsg, 30);
         }
     }
 
     function respondToMatch(response) {
         if (!activeMatchCandidate) {
-            speakAndType('aiOutput', "[INFO] No active peer session linked yet. Run a successful Registry scan first.");
+            const infoMsg = "[INFO] No active peer session linked yet. Run a successful Registry scan first.";
+            speakAndType('aiOutput', infoMsg, 35);
             return;
         }
 
         if (response === 'YES') {
-            const rawPhone = activeMatchCandidate.whatsappNumber ? activeMatchCandidate.whatsappNumber.replace(/[^0-9]/g, '') : '';
-            if (rawPhone) {
-                speakAndType('aiOutput', `[SECURE BRIDGE OPENED] Launching WhatsApp chat with ${activeMatchCandidate.bizName}...`);
-                window.location.href = `https://wa.me/${rawPhone}?text=Hello%20${encodeURIComponent(activeMatchCandidate.bizName)},%20TiffyAI%20Broker%20matched%20our%20business%20nodes.`;
-            } else {
-                speakAndType('aiOutput', `[NOTICE] Match found (${activeMatchCandidate.bizName}), but no valid WhatsApp number was registered on their node profile.`);
-            }
+            const connectMsg = `[SECURE BRIDGE OPENED] Establishing encrypted link with ${activeMatchCandidate.bizName}. WhatsApp contact: ${activeMatchCandidate.whatsappNumber || 'N/A'}`;
+            speakAndType('aiOutput', connectMsg, 30);
         }
     }
 </script>
