@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <script>
+        // Clears the verification hash, plus the repo URL and token configuration fields
+        localStorage.removeItem("KYC_Verified_Hash");
+        localStorage.removeItem("github_repo_url"); // Update this if your key name differs
+        localStorage.removeItem("github_token");     // Update this if your key name differs
+        
+        alert("KYC status and repository settings have been cleared from local storage.");
+        window.close(); 
+    </script>
+</body>
+</html>
