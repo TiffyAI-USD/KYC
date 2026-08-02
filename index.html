@@ -209,7 +209,6 @@
 </div>
 
 <script>
-    // Hardcoded registry constants (ready to be swapped for a custom domain later)
     const REGISTRY_REPO = "TiffyAI-USD/registry";
     const REGISTRY_BRANCH = "main";
 
@@ -223,7 +222,6 @@
         initCamera();
         loadVoices();
 
-        // Load saved token if present
         if (localStorage.getItem("Tiffy_GH_Token")) {
             document.getElementById('ghToken').value = localStorage.getItem("Tiffy_GH_Token");
         }
@@ -408,7 +406,6 @@
         speakAndType('aiOutput', greeting, 35);
     }
 
-    // --- LIVE REGISTRY POLL & SYNC ENGINE ---
     async function runLiveMatchmakerScan() {
         const token = localStorage.getItem("Tiffy_GH_Token");
 
@@ -418,45 +415,39 @@
             return;
         }
 
-        const scanningMsg = `[AI BROKER] Polling TiffyAI registry. Fetching peer nodes...`;
+        const scanningMsg = `[AI BROKER] Polling TiffyAI registry root...`;
         speakAndType('aiOutput', scanningMsg, 30);
 
         try {
-            const path = "registry/matchmaker_nodes.json";
-            const url = `https://api.github.com/repos/${REGISTRY_REPO}/contents/${path}?ref=${REGISTRY_BRANCH}`;
+            const url = `https://raw.githubusercontent.com/${REGISTRY_REPO}/${REGISTRY_BRANCH}/matchmaker_nodes.json?t=${Date.now()}`;
 
             const response = await fetch(url, {
                 headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Accept": "application/vnd.github+json"
+                    "Authorization": `Bearer ${token}`
                 }
             });
 
             if (!response.ok) {
-                throw new Error(`Registry API error: ${response.status} ${response.statusText}`);
+                throw new Error(`Registry HTTP error: ${response.status}`);
             }
 
-            const fileData = await response.json();
-            const decodedContent = atob(fileData.content);
-            const registryNodes = JSON.parse(decodedContent);
-
+            const registryNodes = await response.json();
             const myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
 
-            // Filter out self and find a match candidate
             const candidates = registryNodes.filter(node => node.walletAddress !== myProfile.walletAddress);
 
             if (candidates.length > 0) {
                 activeMatchCandidate = candidates[0];
-                const matchMsg = `[MATCH FOUND] Connected with node: "${activeMatchCandidate.bizName}". Specialization: ${activeMatchCandidate.specialization}. Press 'Say YES & Connect' to establish secure channel.`;
+                const matchMsg = `[MATCH FOUND] Connected with node: "${activeMatchCandidate.bizName}". Specialization: ${activeMatchCandidate.specialization}.`;
                 speakAndType('aiOutput', matchMsg, 30);
             } else {
-                const noMatchMsg = `[SCAN COMPLETE] Registry queried successfully. No active peer nodes found matching criteria at this moment.`;
+                const noMatchMsg = `[SCAN COMPLETE] Registry queried successfully. No other peer nodes found yet.`;
                 speakAndType('aiOutput', noMatchMsg, 30);
             }
 
         } catch (err) {
             console.error("Registry sync failure:", err);
-            const failMsg = `[SYNC FAILED] Could not pull from registry. Check token permissions.`;
+            const failMsg = `[SYNC FAILED] ${err.message}`;
             speakAndType('aiOutput', failMsg, 30);
         }
     }
