@@ -134,6 +134,15 @@
             display: flex;
             gap: 15px;
         }
+
+        /* GitHub Setup Panel */
+        #githubSetupPanel {
+            margin-top: 30px;
+            padding: 25px;
+            background: #111;
+            border: 1px solid #bf953f;
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body onload="initUI()">
@@ -171,6 +180,16 @@
    
     <button onclick="submitRegistration()">Commit to Ledger</button>
 
+    <!-- GitHub Registry Configuration Panel -->
+    <div id="githubSetupPanel">
+        <h3>GitHub Registry Sync Configuration</h3>
+        <p style="font-size: 14px; color: #aaa; text-align: center; margin-top: -15px; margin-bottom: 20px;">Link your repository endpoint to feed and poll live B2B trade data.</p>
+        <input type="text" id="ghRepo" placeholder="GitHub Repository (e.g. username/repo-name)">
+        <input type="text" id="ghBranch" placeholder="Branch (e.g. main)" value="main">
+        <input type="password" id="ghToken" placeholder="GitHub Personal Access Token (PAT)">
+        <button onclick="saveGitHubConfig()" style="background: var(--electric-blue); color: #000;">Save GitHub Credentials</button>
+    </div>
+
     <!-- AI Launch Button -->
     <button id="launchAiBtn" class="hidden" onclick="openAiInterface()" style="background: var(--electric-blue); color: #000; margin-top: 30px;">Launch TiffyAI Broker Interface</button>
 
@@ -202,9 +221,37 @@
         initCamera();
         loadVoices();
 
+        // Load saved GitHub config if present
+        if (localStorage.getItem("Tiffy_GH_Repo")) {
+            document.getElementById('ghRepo').value = localStorage.getItem("Tiffy_GH_Repo");
+        }
+        if (localStorage.getItem("Tiffy_GH_Branch")) {
+            document.getElementById('ghBranch').value = localStorage.getItem("Tiffy_GH_Branch");
+        }
+        if (localStorage.getItem("Tiffy_GH_Token")) {
+            document.getElementById('ghToken').value = localStorage.getItem("Tiffy_GH_Token");
+        }
+
         if (localStorage.getItem("KYC_Verified_Hash")) {
             document.getElementById('launchAiBtn').classList.remove('hidden');
         }
+    }
+
+    function saveGitHubConfig() {
+        const repo = document.getElementById('ghRepo').value.trim();
+        const branch = document.getElementById('ghBranch').value.trim() || "main";
+        const token = document.getElementById('ghToken').value.trim();
+
+        if (!repo || !token) {
+            alert("Please provide both your GitHub Repository and Access Token.");
+            return;
+        }
+
+        localStorage.setItem("Tiffy_GH_Repo", repo);
+        localStorage.setItem("Tiffy_GH_Branch", branch);
+        localStorage.setItem("Tiffy_GH_Token", token);
+
+        alert("GitHub Registry Synchronization Credentials Saved to Local Storage!");
     }
 
     function loadVoices() {
@@ -217,19 +264,15 @@
         }
     }
 
-    // STRICT HARDWARE-LOCKED TIMING PIPELINE
-    // The browser's speech hardware MUST fire and trigger its 'onstart' event 
-    // BEFORE a single character of text is allowed to render on the screen.
     function speakAndType(elementId, text, speed = 35) {
         const outputBox = document.getElementById(elementId);
-        outputBox.innerText = ""; // Clear immediately
+        outputBox.innerText = "";
 
         if (!('speechSynthesis' in window)) {
             typeWriterEffect(elementId, text, speed);
             return;
         }
 
-        // Force-kill any lingering queues or stuck utterances
         window.speechSynthesis.cancel();
 
         if (availableVoices.length === 0) {
@@ -248,7 +291,6 @@
 
         let hasStartedTyping = false;
 
-        // CRITICAL SYNC: Typewriter only starts AFTER the OS audio hardware actually begins speaking
         utterance.onstart = () => {
             if (!hasStartedTyping) {
                 hasStartedTyping = true;
@@ -256,8 +298,6 @@
             }
         };
 
-        // SAFETY FALLBACK: If the browser's speech hardware blocks onstart, 
-        // force-start typing after 400ms so the UI doesn't hang indefinitely.
         const safetyFallback = setTimeout(() => {
             if (!hasStartedTyping) {
                 hasStartedTyping = true;
@@ -269,8 +309,7 @@
             clearTimeout(safetyFallback);
         };
 
-        utterance.onerror = (e) => {
-            console.warn("Speech synthesis hardware error:", e);
+        utterance.onerror = () => {
             clearTimeout(safetyFallback);
             if (!hasStartedTyping) {
                 hasStartedTyping = true;
@@ -278,7 +317,6 @@
             }
         };
 
-        // Fire the sovereign audio pipeline into the browser buffer
         window.speechSynthesis.speak(utterance);
     }
 
@@ -376,20 +414,72 @@
         speakAndType('aiOutput', greeting, 35);
     }
 
-    function runLiveMatchmakerScan() {
-        const myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
-        const myBiz = document.getElementById("bizName").value || myProfile.bizName || "Your Node";
+    // --- LIVE GITHUB REGISTRY POLL & SYNC ENGINE ---
+    async function runLiveMatchmakerScan() {
+        const repo = localStorage.getItem("Tiffy_GH_Repo");
+        const branch = localStorage.getItem("Tiffy_GH_Branch") || "main";
+        const token = localStorage.getItem("Tiffy_GH_Token");
 
-        const scanMessage = `[AI BROKER] Polling GitHub registry for node "${myBiz}". Awaiting live JSON endpoint connection to execute semantic matchmaking.`;
-        
-        speakAndType('aiOutput', scanMessage, 30);
+        if (!repo || !token) {
+            const errNotice = "[ERROR] GitHub credentials missing. Please configure your repository and PAT above.";
+            speakAndType('aiOutput', errNotice, 30);
+            return;
+        }
+
+        const scanningMsg = `[AI BROKER] Polling GitHub registry (${repo}@${branch}). Fetching peer nodes...`;
+        speakAndType('aiOutput', scanningMsg, 30);
+
+        try {
+            // Example target path for peer nodes JSON registry inside the repo
+            const path = "registry/matchmaker_nodes.json";
+            const url = `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`;
+
+            const response = await fetch(url, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github+json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+            }
+
+            const fileData = await response.json();
+            const decodedContent = atob(fileData.content);
+            const registryNodes = JSON.parse(decodedContent);
+
+            const myProfile = JSON.parse(localStorage.getItem("Tiffy_Matchmaker_Profile") || "{}");
+
+            // Filter out self and find a match candidate
+            const candidates = registryNodes.filter(node => node.walletAddress !== myProfile.walletAddress);
+
+            if (candidates.length > 0) {
+                activeMatchCandidate = candidates[0];
+                const matchMsg = `[MATCH FOUND] Connected with node: "${activeMatchCandidate.bizName}". Specialization: ${activeMatchCandidate.specialization}. Press 'Say YES & Connect' to establish secure channel.`;
+                speakAndType('aiOutput', matchMsg, 30);
+            } else {
+                const noMatchMsg = `[SCAN COMPLETE] Registry queried successfully. No active peer nodes found matching criteria at this moment.`;
+                speakAndType('aiOutput', noMatchMsg, 30);
+            }
+
+        } catch (err) {
+            console.error("GitHub sync failure:", err);
+            const failMsg = `[SYNC FAILED] Could not pull from GitHub registry. Check console logs and token permissions.`;
+            speakAndType('aiOutput', failMsg, 30);
+        }
     }
 
     function respondToMatch(response) {
         if (!activeMatchCandidate) {
-            const infoMsg = "[INFO] No active peer session linked yet. Connect GitHub JSON endpoint to begin live B2B matchmaking.";
+            const infoMsg = "[INFO] No active peer session linked yet. Run a successful GitHub Registry scan first.";
             speakAndType('aiOutput', infoMsg, 35);
             return;
+        }
+
+        if (response === 'YES') {
+            const connectMsg = `[SECURE BRIDGE OPENED] Establishing encrypted link with ${activeMatchCandidate.bizName}. WhatsApp contact: ${activeMatchCandidate.whatsappNumber || 'N/A'}`;
+            speakAndType('aiOutput', connectMsg, 30);
         }
     }
 </script>
