@@ -174,7 +174,7 @@
     <label>Upload ID Card</label>
     <input type="file" id="idFile" accept="image/*,application/pdf">
    
-    <button onclick="submitRegistration()">Commit to Ledger & Sync Repo</button>
+    <button onclick="submitRegistration()">Commit to Ledger</button>
 
     <div id="githubSetupPanel">
         <h3>TiffyAI Network Synchronization</h3>
@@ -197,7 +197,7 @@
 
 <div id="successMessage" class="hidden">
     <h1>Registration Successful</h1>
-    <p>Awesome! Your business identity has been fingerprinted to the local ledger and pushed directly to your GitHub registry repository. Your node is fully active for AI trade matchmaking!</p>
+    <p>Awesome! Your business identity has been fingerprinted to the local ledger. Your node is registered to feed the registry sync engine for AI trade matchmaking!</p>
     <button onclick="window.location.reload()">Restart to check your status</button>
 </div>
 
@@ -297,60 +297,8 @@
             desiredConnections: document.getElementById("desiredConnections").value,
             timestamp: new Date().toISOString()
         };
+        
         localStorage.setItem("Tiffy_Matchmaker_Profile", JSON.stringify(matchmakerProfile));
-
-        // Auto-push node profile to GitHub Repository Registry File
-        const token = localStorage.getItem("Tiffy_GH_Token");
-        if (token) {
-            try {
-                // 1. Fetch current file to get SHA and existing nodes
-                const apiUrl = `https://api.github.com/repos/${REGISTRY_REPO}/contents/${FILE_PATH}`;
-                const getRes = await fetch(apiUrl, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                let nodes = [];
-                let fileSha = "";
-
-                if (getRes.ok) {
-                    const fileData = await getRes.json();
-                    fileSha = fileData.sha;
-                    // Decode base64 content safely
-                    const decodedContent = decodeURIComponent(escape(atob(fileData.content)));
-                    nodes = JSON.parse(decodedContent);
-                }
-
-                // Append or update current node
-                const existingIndex = nodes.findIndex(n => n.walletAddress === matchmakerProfile.walletAddress);
-                if (existingIndex >= 0) {
-                    nodes[existingIndex] = matchmakerProfile;
-                } else {
-                    nodes.push(matchmakerProfile);
-                }
-
-                // 2. Push updated JSON back to GitHub root
-                const newContentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(nodes, null, 2))));
-                const putRes = await fetch(apiUrl, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: `Node registration: ${bizName}`,
-                        content: newContentEncoded,
-                        sha: fileSha,
-                        branch: REGISTRY_BRANCH
-                    })
-                });
-
-                if (!putRes.ok) {
-                    console.warn("Auto-sync warning: GitHub commit returned status " + putRes.status);
-                }
-            } catch (err) {
-                console.error("Auto-sync error during commit:", err);
-            }
-        }
 
         const data = `${bizName}|${walletAddress}|${Date.now()}`;
         const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
