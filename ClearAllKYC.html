@@ -2,14 +2,24 @@
 <html>
 <body>
     <script>
-        localStorage.removeItem("KYC_Verified_Hash");
-        localStorage.removeItem("Tiffy_GH_Repo");
-        localStorage.removeItem("Tiffy_GH_Branch");
-        localStorage.removeItem("Tiffy_GH_Token");
+        // --- 1. FINANCIAL & WALLET CLEARS (Prevents cross-wallet stealing & mixing) ---
+        localStorage.removeItem("walletAddress");
         localStorage.removeItem("Tiffy_Matchmaker_Profile");
+        localStorage.removeItem("Tiffy_Harvest_Pending");
+        localStorage.removeItem("TUSD_Nitro_Storage");
+        localStorage.removeItem("TUSD_OnChain_Wallet_Balance");
+
+        // --- 2. SECURITY & PIN RESET (Forces clean PIN re-entry via KYC reset) ---
+        localStorage.removeItem("User_Access_PIN");
+        localStorage.removeItem("Tiffy_PIN_Locked");
+        localStorage.removeItem("KYC_Verified_Hash"); 
+
+        // NOTE: We intentionally left out KYC_Timestamp, Tiffy_Bonus_Applied, 
+        // and Tiffy_GH_Token so your subscription timer and GitHub token persist!
+
+        alert("Reset Complete: Wallet and token balances cleared. Security PIN reset triggered. Subscription timeline and GitHub configurations preserved.");
         
-        alert("All KYC and GitHub registry configuration keys have been cleared.");
-        window.close(); 
+        window.location.href = "index.html"; 
     </script>
 </body>
 </html>
